@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="standard_padding">16dp</dimen>
+    <dimen name="action_bar_vertical_padding">16dp</dimen>
+    <dimen name="profile_picture_size">48dp</dimen>
+</resources>
