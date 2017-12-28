@@ -17,7 +17,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initializeChatList() {
-        RecyclerView chatListRecyclerView = findViewById(R.id.rv_chat_list);
+        RecyclerView chatListRecyclerView = findViewById(R.id.front_view);
         chatListRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         chatListRecyclerView.setItemAnimator(new DefaultItemAnimator());
 
