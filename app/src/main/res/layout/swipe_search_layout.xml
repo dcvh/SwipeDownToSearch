@@ -17,8 +17,8 @@
         android:paddingRight="@dimen/standard_padding">
 
         <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
             android:src="@drawable/logo"
             android:adjustViewBounds="true"
             android:layout_gravity="start|center_vertical"
@@ -35,57 +35,6 @@
 
     </FrameLayout>
 
-    <LinearLayout
-        android:id="@+id/rear_view"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:orientation="vertical"
-        android:background="@android:color/white"
-        app:layout_constraintTop_toBottomOf="@id/toolbar"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:paddingTop="@dimen/action_bar_vertical_padding"
-            android:paddingBottom="@dimen/action_bar_vertical_padding">
-
-            <ImageView
-                android:id="@+id/btn_back"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_search_black_24dp"
-                android:tint="@color/gray_500"
-                android:layout_marginLeft="@dimen/standard_padding"
-                android:layout_marginRight="@dimen/standard_padding"
-                android:contentDescription="@string/search_icon" />
-
-            <EditText
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="text"
-                android:focusable="false"
-                android:hint="@string/search_hint"
-                android:layout_marginRight="@dimen/standard_padding"
-                android:background="@android:color/transparent"/>
-
-        </LinearLayout>
-
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:contentDescription="@string/search_icon" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-    </LinearLayout>
-
     <android.support.v7.widget.RecyclerView
         android:id="@+id/front_view"
         android:layout_width="0dp"
@@ -101,5 +50,64 @@
         tools:targetApi="lollipop">
 
     </android.support.v7.widget.RecyclerView>
+
+    <LinearLayout
+        android:id="@+id/rear_view"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:background="@android:color/white"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        android:paddingLeft="@dimen/standard_padding"
+        android:paddingRight="@dimen/standard_padding">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingTop="@dimen/action_bar_vertical_padding"
+            android:paddingBottom="@dimen/action_bar_vertical_padding">
+
+            <ImageView
+                android:id="@+id/btn_back"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:src="@drawable/ic_search_black_24dp"
+                android:tint="@color/gray_500"
+                android:layout_marginRight="@dimen/standard_padding"
+                android:layout_marginEnd="@dimen/standard_padding"
+                android:contentDescription="@string/search_icon" />
+
+            <EditText
+                android:id="@+id/edt_search"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:hint="@string/search_hint"
+                android:background="@android:color/transparent"/>
+
+        </LinearLayout>
+
+        <ImageView
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_gravity="center_horizontal"
+            android:src="@drawable/ic_search_black_500dp"
+            android:layout_marginTop="32dp"
+            android:contentDescription="@string/search_icon" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:layout_gravity="center_horizontal"
+            android:gravity="center"
+            android:text="@string/find_chats"/>
+
+    </LinearLayout>
 
 </merge>

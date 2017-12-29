@@ -6,5 +6,5 @@
     <string name="search_hint">Search for people and groups</string>
     <string name="profile_picture">Profile picture</string>
     <string name="nothing_yet">Nothing yet</string>
-    <string name="find_chats">Find chats by searching for people or groups</string>
+    <string name="find_chats">Find chats by searching for\npeople or groups</string>
 </resources>

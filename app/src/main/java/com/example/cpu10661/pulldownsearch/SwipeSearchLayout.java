@@ -1,6 +1,7 @@
 package com.example.cpu10661.pulldownsearch;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.os.Build;
@@ -13,7 +14,10 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.WindowManager;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
+import android.widget.EditText;
 
 /**
  * Created by cpu10661 on 12/28/17.
@@ -26,18 +30,19 @@ public class SwipeSearchLayout extends ConstraintLayout {
 
     private static final String TAG = SwipeSearchLayout.class.getSimpleName();
 
-    private static final float DRAG_RATE = 1f;
+    private static final float DRAG_RATE = 0.3f;
     private static final int INVALID_POINTER = -1;
     private static final int SLIDE_DURATION_MILLIS = 150;
 
     private int mTouchSlop;
     private boolean mIsBeingDragged = false;
-    private boolean mIsRearViewShown = false;
+    private boolean mIsShowingFront = true;
 
     private View mToolbar, mFrontView, mRearView;
     private int mContentViewTop;
     private float mMaxDragDistance, mDistanceDiff;
     private float mRevealThreshold;
+    private InputMethodManager mInputMethodManager;
 
     private int mActivePointerId;
     private float mInitialMotionY;
@@ -67,10 +72,11 @@ public class SwipeSearchLayout extends ConstraintLayout {
         mToolbar = findViewById(R.id.toolbar);
         mFrontView = findViewById(R.id.front_view);
         mRearView = findViewById(R.id.rear_view);
+        mRearView.setClickable(true);
         findViewById(R.id.btn_back).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
-                returnBackButtonFunction();
+                showFrontView();
             }
         });
 
@@ -85,6 +91,11 @@ public class SwipeSearchLayout extends ConstraintLayout {
         mMaxDragDistance = toolbarHeight;
         mDistanceDiff = toolbarHeight;
         mRevealThreshold = mMaxDragDistance * 1.6f;     // obtain through trial and error
+
+        mInputMethodManager = (InputMethodManager)
+                getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        ((Activity)getContext()).getWindow()
+                .setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
     }
 
     @Override
@@ -114,7 +125,8 @@ public class SwipeSearchLayout extends ConstraintLayout {
                     return false;
                 }
                 final float yDiff = y - mInitialMotionY;
-                if (yDiff > mTouchSlop && !mIsBeingDragged) {
+                boolean isSwipeGestureValid = (mIsShowingFront ? yDiff : -yDiff) > mTouchSlop;
+                if (isSwipeGestureValid && !mIsBeingDragged) {
                     mIsBeingDragged = true;
                 }
                 break;
@@ -140,10 +152,10 @@ public class SwipeSearchLayout extends ConstraintLayout {
                         && (absListView.getFirstVisiblePosition() > 0 || absListView.getChildAt(0)
                         .getTop() < absListView.getPaddingTop());
             } else {
-                return !mIsRearViewShown && mFrontView.getScrollY() > 0;
+                return mIsShowingFront && mFrontView.getScrollY() > 0;
             }
         } else {
-            return !mIsRearViewShown && mFrontView.canScrollVertically(-1);
+            return mIsShowingFront && mFrontView.canScrollVertically(-1);
         }
     }
 
@@ -167,7 +179,7 @@ public class SwipeSearchLayout extends ConstraintLayout {
                 final float yDiff = y - mInitialMotionY;
                 final float overScrollTop = yDiff * DRAG_RATE;
 
-                if (!mIsRearViewShown) {
+                if (mIsShowingFront) {
                     // scrolling views
                     float toolbarSlideY = getValueInRange(0, mMaxDragDistance,
                             overScrollTop - mDistanceDiff);
@@ -176,10 +188,6 @@ public class SwipeSearchLayout extends ConstraintLayout {
                     mRearView.setY(mContentViewTop - toolbarSlideY);
                     mFrontView.setY(mContentViewTop + getValueInRange(0,
                             mMaxDragDistance + mDistanceDiff, overScrollTop));
-                } else {
-                    if (overScrollTop < 0 && Math.abs(overScrollTop) > mMaxDragDistance) {
-                        returnBackButtonFunction();
-                    }
                 }
 
                 break;
@@ -201,19 +209,18 @@ public class SwipeSearchLayout extends ConstraintLayout {
                 final float y = ev.getY(pointerIndex);
                 final float overScrollTop = (y - mInitialMotionY) * DRAG_RATE;
 
-                if (overScrollTop > mRevealThreshold) {
-                    // review search screen
-                    mToolbar.animate().setDuration(SLIDE_DURATION_MILLIS).y(-mMaxDragDistance);
-                    mFrontView.animate().setDuration(SLIDE_DURATION_MILLIS).y(getHeight());
-                    mRearView.animate().setDuration(SLIDE_DURATION_MILLIS).y(0);
-
-                    // temporarily override back button function
-                    setFocusableInTouchMode(true);
-                    requestFocus();
-                    mIsRearViewShown = true;
+                if (mIsShowingFront) {
+                    if (overScrollTop > mRevealThreshold) {
+                        showRearView();
+                    } else {
+                        animateViewsBackToOriginalPosition();
+                    }
                 } else {
-                    animateViewsBackToOriginalPosition();
+                    if (overScrollTop < 0 && -overScrollTop > mMaxDragDistance / 2) {
+                        showFrontView();
+                    }
                 }
+
                 mIsBeingDragged = false;
                 mActivePointerId = INVALID_POINTER;
                 return false;
@@ -245,30 +252,66 @@ public class SwipeSearchLayout extends ConstraintLayout {
         return ev.getY(index);
     }
 
+    @Override
+    public boolean dispatchKeyEventPreIme(KeyEvent event) {
+        Log.d(TAG, "dispatchKeyEventPreIme: ");
+        // override back button function
+        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && !mIsShowingFront) {
+            showFrontView();
+            return true;
+        }
+        return super.dispatchKeyEventPreIme(event);
+    }
+
+    private void showRearView() {
+        if (!mIsShowingFront) {
+            return;
+        }
+
+        // animate views
+        mToolbar.animate().setDuration(SLIDE_DURATION_MILLIS).y(-mMaxDragDistance);
+        mFrontView.animate().setDuration(SLIDE_DURATION_MILLIS).y(getHeight());
+        mRearView.animate().setDuration(SLIDE_DURATION_MILLIS).y(0);
+
+        overrideBackButtonFunction(true);
+
+        // automatically show the keyboard
+        mRearView.requestFocus();
+        mInputMethodManager.toggleSoftInput(InputMethodManager.SHOW_FORCED,
+                InputMethodManager.HIDE_IMPLICIT_ONLY);
+
+        mIsShowingFront = false;
+    }
+
+    private void showFrontView() {
+        if (mIsShowingFront) {
+            return;
+        }
+
+        overrideBackButtonFunction(false);
+        animateViewsBackToOriginalPosition();
+
+        // hide the keyboard
+        mInputMethodManager.hideSoftInputFromWindow(mRearView.getWindowToken(), 0);
+        mFrontView.requestFocus();
+
+        mIsShowingFront = true;
+    }
+
+    private void overrideBackButtonFunction(boolean override) {
+        if (override) {
+            setFocusableInTouchMode(true);
+            requestFocus();
+        } else {
+            setFocusableInTouchMode(false);
+            clearFocus();
+        }
+    }
+
     private void animateViewsBackToOriginalPosition() {
         mToolbar.animate().setDuration(SLIDE_DURATION_MILLIS).y(0);
         mToolbar.animate().setDuration(SLIDE_DURATION_MILLIS).alpha(1);
-
         mFrontView.animate().setDuration(SLIDE_DURATION_MILLIS).y(mMaxDragDistance);
-
         mRearView.animate().setDuration(SLIDE_DURATION_MILLIS).y(mMaxDragDistance);
-    }
-
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        // override back button function
-        if (keyCode == KeyEvent.KEYCODE_BACK && mIsRearViewShown) {
-            returnBackButtonFunction();
-            return true;
-        }
-        return super.onKeyDown(keyCode, event);
-    }
-
-    private void returnBackButtonFunction() {
-        animateViewsBackToOriginalPosition();
-        mIsRearViewShown = false;
-
-        setFocusableInTouchMode(false);
-        clearFocus();
     }
 }
