@@ -3,27 +3,28 @@ package com.example.cpu10661.pulldownsearch;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
-import android.content.res.TypedArray;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.KeyEvent;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
-import android.widget.EditText;
+import android.widget.ImageView;
 
 /**
  * Created by cpu10661 on 12/28/17.
  *
- * This layout must be used as a separated layout taking up the whole screen,
- * in other words both height and width should be assigned match_parent value
+ * Prerequisites:
+ * 1. This layout must be used as a separated layout taking up the whole screen,
+ *    in other words both height and width should be assigned match_parent value
+ * 2. The number of child views must be 3, otherwise it will throw an exception
+ * 3. The order of child views must be as follows: toolbar, front view, then rear view.
+ *
  */
 
 public class SwipeSearchLayout extends ConstraintLayout {
@@ -49,53 +50,76 @@ public class SwipeSearchLayout extends ConstraintLayout {
 
     public SwipeSearchLayout(Context context) {
         super(context);
-        init(context);
     }
 
     public SwipeSearchLayout(Context context, AttributeSet attrs) {
         super(context, attrs);
-        init(context);
+        init(context, attrs, 0);
     }
 
     public SwipeSearchLayout(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init(context);
+        init(context, attrs, defStyleAttr);
     }
 
-    private void init(Context context) throws IllegalArgumentException {
+    private void init(Context context, AttributeSet attrs, int defStyle) {
+        // initialize variables
+        mTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+        mInputMethodManager = (InputMethodManager)
+                getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
 
-        // inflate layout
-        LayoutInflater.from(context).inflate(R.layout.swipe_search_layout, this);
+        // force the keyboard to overlay the behind view
+        ((Activity)getContext()).getWindow()
+                .setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
+    }
+
+    @Override
+    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        super.onLayout(changed, left, top, right, bottom);
+
+        initializeLayout();
+
+        int toolbarHeight = mToolbar.getHeight();
+        mContentViewTop = toolbarHeight;
+        mMaxDragDistance = toolbarHeight;
+        mDistanceDiff = toolbarHeight;
+        mRevealThreshold = mMaxDragDistance * 1.6f;     // obtain through trial and error
+    }
+
+    private void initializeLayout() throws IllegalArgumentException {
+
         if (getChildCount() != 3) {
-            throw new IllegalArgumentException("This view must have 3 child views");
+            throw new IllegalArgumentException("This view must have 3 child views, currently having "
+                    + getChildCount() + " view(s)");
         }
-        mToolbar = findViewById(R.id.toolbar);
-        mFrontView = findViewById(R.id.front_view);
-        mRearView = findViewById(R.id.rear_view);
+
+        mToolbar = getChildAt(0);
+        mFrontView = getChildAt(1);
+        mRearView = getChildAt(2);
+
+        // to detect swipe up gesture (to return to front view)
+        mFrontView.setClickable(true);
         mRearView.setClickable(true);
-        findViewById(R.id.btn_back).setOnClickListener(new OnClickListener() {
+
+        // TODO: 12/29/17 come up with a more intuitive solution
+        ImageView upButton = findViewById(R.id.btn_back);
+        if (upButton != null) {
+            upButton.setOnClickListener(new OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showFrontView();
+                }
+            });
+        }
+    }
+
+    public void setButtonAsUpEnabled(int upButtonResId) {
+        findViewById(upButtonResId).setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View v) {
                 showFrontView();
             }
         });
-
-        // TODO: 12/28/17 come up with a more accurate method to obtain toolbar height
-        // instead of relying on the assumption that toolbar uses the ?attr/actionBarSize value
-        TypedArray ta = getContext().obtainStyledAttributes(new int[] {R.attr.actionBarSize});
-        int toolbarHeight = ta.getDimensionPixelSize(0, -1);
-        ta.recycle();
-
-        mTouchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
-        mContentViewTop = toolbarHeight;
-        mMaxDragDistance = toolbarHeight;
-        mDistanceDiff = toolbarHeight;
-        mRevealThreshold = mMaxDragDistance * 1.6f;     // obtain through trial and error
-
-        mInputMethodManager = (InputMethodManager)
-                getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-        ((Activity)getContext()).getWindow()
-                .setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN);
     }
 
     @Override
@@ -180,7 +204,7 @@ public class SwipeSearchLayout extends ConstraintLayout {
                 final float overScrollTop = yDiff * DRAG_RATE;
 
                 if (mIsShowingFront) {
-                    // scrolling views
+                    // animate those views
                     float toolbarSlideY = getValueInRange(0, mMaxDragDistance,
                             overScrollTop - mDistanceDiff);
                     mToolbar.setY(-toolbarSlideY);
@@ -216,7 +240,9 @@ public class SwipeSearchLayout extends ConstraintLayout {
                         animateViewsBackToOriginalPosition();
                     }
                 } else {
-                    if (overScrollTop < 0 && -overScrollTop > mMaxDragDistance / 2) {
+                    // return to front view
+                    if (overScrollTop < 0 &&
+                            -overScrollTop > mMaxDragDistance / 2 /* trial and error */) {
                         showFrontView();
                     }
                 }
@@ -254,7 +280,6 @@ public class SwipeSearchLayout extends ConstraintLayout {
 
     @Override
     public boolean dispatchKeyEventPreIme(KeyEvent event) {
-        Log.d(TAG, "dispatchKeyEventPreIme: ");
         // override back button function
         if (event.getKeyCode() == KeyEvent.KEYCODE_BACK && !mIsShowingFront) {
             showFrontView();
