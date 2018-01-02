@@ -6,6 +6,7 @@ import android.content.Context;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
+import android.support.constraint.ConstraintSet;
 import android.util.AttributeSet;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -23,7 +24,10 @@ import android.widget.ImageView;
  * 1. This layout must be used as a separated layout taking up the whole screen,
  *    in other words both height and width should be assigned match_parent value
  * 2. The number of child views must be 3, otherwise it will throw an exception
- * 3. The order of child views must be as follows: toolbar, front view, then rear view.
+ * 3. The order of child views must be as follows: toolbar, rear view, then front view.
+ * 4. All constraint attributes will be initialized in code so it does not need to be defined in
+ *    xml layout. Additionally, width/height attributes (except for toolbar height) must be 0dp,
+ *    otherwise the layout might not render properly.
  *
  */
 
@@ -87,15 +91,17 @@ public class SwipeSearchLayout extends ConstraintLayout {
     }
 
     private void initializeLayout() throws IllegalArgumentException {
-
+        // check number of child views
         if (getChildCount() != 3) {
             throw new IllegalArgumentException("This view must have 3 child views, currently having "
                     + getChildCount() + " view(s)");
         }
 
         mToolbar = getChildAt(0);
-        mFrontView = getChildAt(1);
-        mRearView = getChildAt(2);
+        mRearView = getChildAt(1);
+        mFrontView = getChildAt(2);
+//        resetWidthHeight();
+        initializeConstraints();
 
         // to detect swipe up gesture (to return to front view)
         mFrontView.setClickable(true);
@@ -111,6 +117,49 @@ public class SwipeSearchLayout extends ConstraintLayout {
                 }
             });
         }
+    }
+
+    private void resetWidthHeight() {
+        // toolbar
+        LayoutParams toolbarParams = (LayoutParams) mToolbar.getLayoutParams();
+        toolbarParams.width = 0;
+        mToolbar.setLayoutParams(toolbarParams);
+
+        // front and rear view
+        LayoutParams layoutParams = new LayoutParams(0, 0);
+        mFrontView.setLayoutParams(layoutParams);
+        mRearView.setLayoutParams(layoutParams);
+    }
+
+    private void initializeConstraints() {
+        // get view IDs
+        int toolbarId = mToolbar.getId();
+        int frontViewId = mFrontView.getId();
+        int rearViewId = mRearView.getId();
+        int parentId = ConstraintSet.PARENT_ID;
+
+        ConstraintSet constraintSet = new ConstraintSet();
+        constraintSet.clone(this);
+
+        // toolbar constraint
+        constraintSet.connect(toolbarId, ConstraintSet.TOP, parentId, ConstraintSet.TOP,0);
+        constraintSet.connect(toolbarId, ConstraintSet.LEFT, parentId, ConstraintSet.LEFT,0);
+        constraintSet.connect(toolbarId, ConstraintSet.RIGHT, parentId, ConstraintSet.RIGHT,0);
+
+        // front view constraint
+        constraintSet.connect(frontViewId, ConstraintSet.TOP, toolbarId, ConstraintSet.BOTTOM,0);
+        constraintSet.connect(frontViewId, ConstraintSet.BOTTOM, parentId, ConstraintSet.BOTTOM,0);
+        constraintSet.connect(frontViewId, ConstraintSet.LEFT, parentId, ConstraintSet.LEFT,0);
+        constraintSet.connect(frontViewId, ConstraintSet.RIGHT, parentId, ConstraintSet.RIGHT,0);
+
+        // rear view constraint
+        constraintSet.connect(rearViewId, ConstraintSet.TOP, toolbarId, ConstraintSet.BOTTOM,0);
+        constraintSet.connect(rearViewId, ConstraintSet.BOTTOM, parentId, ConstraintSet.BOTTOM,0);
+        constraintSet.connect(rearViewId, ConstraintSet.LEFT, parentId, ConstraintSet.LEFT,0);
+        constraintSet.connect(rearViewId, ConstraintSet.RIGHT, parentId, ConstraintSet.RIGHT,0);
+
+        // apply constraints
+        constraintSet.applyTo(this);
     }
 
     public void setButtonAsUpEnabled(int upButtonResId) {
