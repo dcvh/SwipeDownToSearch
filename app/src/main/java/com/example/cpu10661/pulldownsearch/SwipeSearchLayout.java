@@ -4,11 +4,11 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.os.Build;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.constraint.ConstraintSet;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -17,9 +17,6 @@ import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
 import android.widget.ImageView;
-
-import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * Created by cpu10661 on 12/28/17.
@@ -360,11 +357,11 @@ public class SwipeSearchLayout extends ConstraintLayout {
 //        mFrontView.animate().setDuration(SLIDE_DURATION_MILLIS).y(getHeight());
         float segment = (getHeight() - mFrontView.getY()) / SLIDE_DURATION_MILLIS;
         float curY = mFrontView.getY();
-        Timer timer = new Timer();
+        Handler handler = new Handler();
         for (int i = 0; curY < getHeight(); i++) {
             curY += segment;
             final float nextY = curY;
-            timer.schedule(new TimerTask() {
+            handler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     mFrontView.setY(nextY);
