@@ -8,6 +8,7 @@ import android.support.annotation.NonNull;
 import android.support.constraint.ConstraintLayout;
 import android.support.constraint.ConstraintSet;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -16,6 +17,9 @@ import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AbsListView;
 import android.widget.ImageView;
+
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * Created by cpu10661 on 12/28/17.
@@ -48,6 +52,7 @@ public class SwipeSearchLayout extends ConstraintLayout {
     private float mMaxDragDistance, mDistanceDiff;
     private float mRevealThreshold;
     private InputMethodManager mInputMethodManager;
+    private boolean mIsConstraintsInitialized = false;
 
     private int mActivePointerId;
     private float mInitialMotionY;
@@ -100,8 +105,13 @@ public class SwipeSearchLayout extends ConstraintLayout {
         mToolbar = getChildAt(0);
         mRearView = getChildAt(1);
         mFrontView = getChildAt(2);
-//        resetWidthHeight();
-        initializeConstraints();
+
+        // initialize constraints
+        if (!mIsConstraintsInitialized) {
+//            resetWidthHeight();
+            initializeConstraints();
+            mIsConstraintsInitialized = true;
+        }
 
         // to detect swipe up gesture (to return to front view)
         mFrontView.setClickable(true);
@@ -342,10 +352,25 @@ public class SwipeSearchLayout extends ConstraintLayout {
             return;
         }
 
-        // animate views
+        // slide up toolbar and rear view
         mToolbar.animate().setDuration(SLIDE_DURATION_MILLIS).y(-mMaxDragDistance);
-        mFrontView.animate().setDuration(SLIDE_DURATION_MILLIS).y(getHeight());
         mRearView.animate().setDuration(SLIDE_DURATION_MILLIS).y(0);
+
+        // slide down the front view
+//        mFrontView.animate().setDuration(SLIDE_DURATION_MILLIS).y(getHeight());
+        float segment = (getHeight() - mFrontView.getY()) / SLIDE_DURATION_MILLIS;
+        float curY = mFrontView.getY();
+        Timer timer = new Timer();
+        for (int i = 0; curY < getHeight(); i++) {
+            curY += segment;
+            final float nextY = curY;
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    mFrontView.setY(nextY);
+                }
+            }, i);
+        }
 
         overrideBackButtonFunction(true);
 
